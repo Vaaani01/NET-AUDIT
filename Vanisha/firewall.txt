@@ -1,0 +1,74 @@
+Firewall Reconnaissance Report – 10.0.0.1
+
+Target Information
+IP Address: 10.0.0.1  
+- Scan Date: April 22, 2025  
+- Device Suspected: Sophos Firewall / VPN Portal  
+- Purpose: To enumerate open services, analyze potential firewall behavior, and understand network-level access.
+
+---
+
+Scanning and Enumeration
+
+Basic Nmap Port Scan: "nmap -sS -T4 -p- 10.0.0.1"
+
+
+>Result: Found filtered ports; host is up.
+
+Service Detection & Version Scan:
+"nmap -sV -A 10.0.0.1"
+
+
+>Discovered Ports & Services:
+| Port     | State   | Service         |
+|----------|---------|-----------------|
+| 22/tcp   | open    | ssh             |
+| 25/tcp   | open    | smtp            |
+| 53/tcp   | open    | domain (DNS)    |
+| 443/tcp  | open    | https (VPN)     |
+| 3128/tcp | open    | squid-http (proxy) |
+| 4443/tcp | open    | pharos (possible web portal) |
+| 4444/tcp | open    | krb524 (Kerberos) |
+| 8090/tcp | open    | opsmessaging    |
+| 9922/tcp | open    | unknown         |
+| Other Ports (e.g., 2712, 8094, 65123) | closed | - |
+
+---
+
+Web Portal Findings
+
+- Accessed via:   "https://10.0.0.1"
+
+- Output:  
+  Self-signed certificate error (Sophos VPN portals often show this behavior).
+
+- HTML Source Analysis:
+  - Contains scripts like `login.js`, `OEM.js`
+  - Mentions Sophos-style UI with `/themes/lite1/css/loginstylesheet.css`
+  - Default login form with username/password fields
+  - Likely a **Sophos SSL VPN Portal**
+
+---
+
+Manual Interaction via Netcat
+"nc -nvv 10.0.0.1 80"
+GET / HTTP/1.1
+Host: 10.0.0.1
+
+> Result: Connection opened but no HTTP response — likely not serving HTTP on port 80, or blocked response due to firewall/web application filter.
+
+---
+
+Firewall Behavior Analysis
+- Majority of ports are `filtered`, meaning firewall silently drops requests (no RST or ICMP reply).
+- HTTPS shows self-signed SSL → strong indicator of Sophos or similar security appliance.
+- Some ports (e.g., 3128, 4443) used by web interfaces / proxies / internal services — **may be allowed internally only.**
+- Nmap flags show no OS banner leaked → stealth rules likely enabled.
+
+---
+
+Conclusion:
+- This host likely runs a Sophos Firewall/VPN portal.
+- Outward-facing services are minimal and filtered — typical behavior of enterprise firewalls.
+- Port 443 shows web login portal; possibly accessible to users via VPN or client auth.
+- Other open ports (3128, 4443, 4444, 8090, 9922) may be used for admin interface, proxying, or back-end services.
